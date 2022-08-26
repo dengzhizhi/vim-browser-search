@@ -6,6 +6,20 @@
 
 scriptencoding utf-8
 
+function! s:url_encode(s) abort
+let urlsafe = ""
+for char in split(a:s, '.\zs')
+    if matchend(char, '[-_.~a-zA-Z0-9]') >= 0
+        let urlsafe = urlsafe . char
+    else
+        let decimal = char2nr(char)
+        let urlsafe = urlsafe . "%" . printf("%02x", decimal)
+    endif
+endfor
+return urlsafe
+endfunction
+
+
 function! search#search(text, engine) abort
   let url = g:browser_search_builtin_engines[a:engine]
   " Replace `\n`, preserve `\`
@@ -17,19 +31,11 @@ function! search#search(text, engine) abort
   if url_in_text !=# ''
     let url = url_in_text
   else
-    " Escape double-quote, back-quote, back-slash, whitespace
-    let text = substitute(text, ' ', '+', 'g')
-    let text = substitute(text, '`','%60','g')
-    let text = substitute(text, '\$','%24','g')
-    let text = substitute(text, '/','%2F','g')
-    let text = substitute(text, "&", '%26', 'g')
-    let text = substitute(text, '\', '%5C', 'g')
+    let text = s:url_encode(text)
     let url = printf(url, text)
   endif
 
   let url = substitute(url, '"', "%22", 'g')
-
-  echo url
 
   if has('nvim')
     let url = shellescape(url)
