@@ -6,7 +6,7 @@
 
 scriptencoding utf-8
 
-function! s:search(text, engine) abort
+function! search#search(text, engine) abort
   let url = g:browser_search_builtin_engines[a:engine]
   " Replace `\n`, preserve `\`
   let text = substitute(a:text, '\n', ' ', 'g')
@@ -17,14 +17,20 @@ function! s:search(text, engine) abort
   if url_in_text !=# ''
     let url = url_in_text
   else
+    " Escape double-quote, back-quote, back-slash, whitespace
+    let text = substitute(text, ' ', '+', 'g')
+    let text = substitute(text, '`','%60','g')
+    let text = substitute(text, '\$','%24','g')
+    let text = substitute(text, '/','%2F','g')
+    let text = substitute(text, "&", '%26', 'g')
+    let text = substitute(text, '\', '%5C', 'g')
     let url = printf(url, text)
   endif
 
-  " Escape double-quote, back-quote, back-slash, whitespace
-  let url = substitute(url, '\(["`]\)','\="\\".submatch(1)','g')
-  let url = substitute(url, '\$','\\$','g')
-  let url = search#util#trim(url,'%20')
-  let url = search#util#trim(url,"\\")
+  let url = substitute(url, '"', "%22", 'g')
+
+  echo url
+
   if has('nvim')
     let url = shellescape(url)
   else
@@ -64,7 +70,7 @@ function! search#search_normal(visual_type) abort
   endif
   let text = @"
   let @" = reg_tmp
-  call s:search(text, get(b:, 'browser_search_default_engine', g:browser_search_default_engine))
+  call search#search(text, get(b:, 'browser_search_default_engine', g:browser_search_default_engine))
   call setpos('.', g:browser_search_curpos)
 endfunction
 
@@ -73,7 +79,7 @@ function! search#search_visual() abort
   normal! gv""y
   let text=@"
   let @" = reg_tmp
-  call s:search(text, get(b:, 'browser_search_default_engine', g:browser_search_default_engine))
+  call search#search(text, get(b:, 'browser_search_default_engine', g:browser_search_default_engine))
 endfunction
 
 let s:has_popup = has('textprop') && has('patch-8.2.0286')
@@ -103,7 +109,7 @@ function! search#start(text, visualmode, range) abort
     function! s:bs_menu_handler(id, index) abort
       if a:index == -1 | return | endif
       let engine = s:enginelist[a:index-1]
-      call s:search(s:text, engine)
+      call search#search(s:text, engine)
     endfunction
 
     call popup_menu(s:enginelist, {
@@ -146,7 +152,7 @@ function! search#start(text, visualmode, range) abort
 
     function! s:select_and_search() abort
       let engine = s:enginelist[line('.') - 1]
-      call s:search(s:text, engine)
+      call search#search(s:text, engine)
       call s:close_menu()
     endfunction
 
@@ -173,5 +179,5 @@ function! search#start(text, visualmode, range) abort
     return
   endif
   let engine = s:enginelist[select]
-  call s:search(s:text, engine)
+  call search#search(s:text, engine)
 endfunction
